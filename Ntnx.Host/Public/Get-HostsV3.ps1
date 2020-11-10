@@ -19,34 +19,22 @@ Please be aware that all code samples provided here are unofficial in nature, ar
         [string]
         $ComputerName,
 
-        <# Number of Hosts to return
-        [Parameter()]
-        [Parameter(ParameterSetName="Count")]
-        [AllowNull()]
-        [int]
-        $Count,
-
-        [Parameter()]
-        [Parameter(ParameterSetName="Count")]
-        [AllowNull()]
-        [int]
-        $Offset,
-
-        # All Records
-        [Parameter(Mandatory=$false)]
-        [Parameter(ParameterSetName="All")]
-        [switch]
-        $All,
-#>
         # Prism UI Credential to invoke call
         [Parameter(Mandatory=$true)]
         [PSCredential]
         $Credential,
 
-        # Prism UI Credential to invoke call
+        # Body Parameter1
+        #[Parameter()]
+        #$BodyParam1,
+
         [Parameter(Mandatory=$false)]
         [switch]
-        $SkipCertificateCheck = $true,
+        $SkipCertificateCheck,
+
+        [Parameter(Mandatory=$false)]
+        [switch]
+        $ShowMetadata,
 
         # Port (Default is 9440)
         [Parameter(Mandatory=$false)]
@@ -59,36 +47,16 @@ Please be aware that all code samples provided here are unofficial in nature, ar
     }
 
     process {
-
-        $body = @{
-            kind = "host"
-        } 
-
-        $Count = 1
-        $Offset = 0
-
-        <#
-        if($All){
-            $Count = 500
-            $Offset = 0
-        }
-
-        if($null -ne $Count){
-            $body.add("length",$Count)
-        }
-        if($null -ne $Offset){
-            $body.add("offset",$Offset)
-        }
-        #>
-
-        $body.add("length",$Count)
-        $body.add("offset",$Offset)
+        $body = [Hashtable]::new()
+        $body.add("kind","host")
 
         $iwrArgs = @{
             Uri = "https://$($ComputerName):$($Port)/api/nutanix/v3/hosts/list"
-            ContentType = "application/json"
             Method = "POST"
-            Body = $body | ConvertTo-Json -Depth 99
+            ContentType = "application/json"
+        }
+        if($body.count -ge 1){
+            $iwrArgs.add("Body",($body | ConvertTo-Json))
         }
 
         if($PSVersionTable.PSVersion.Major -lt 6){
@@ -105,34 +73,25 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }
         }
         
-        try {
-            $response = Invoke-WebRequest @iwrArgs
-            if($response.StatusCode -eq 200){
-                $totalMatches = ($response.content | ConvertFrom-Json -Depth 99).metadata.total_matches
-                Write-Verbose -Message "Total records: $totalMatches"
-                if($Count -lt $totalMatches){
-                    ($response.content | ConvertFrom-Json -Depth 99).entities
-                }
-                #elseif($totalMatches -gt $Count){
-                else{
-                    do { 
-                        $response = Invoke-WebRequest @iwrArgs
-                        if($response.StatusCode -eq 200){
-                            ($response.content | ConvertFrom-Json -Depth 99).entities
-                        }
-                        $iwrArgs.body.offset += $Count
-                        Write-Verbose -Message "$Count"
-                    }
-                    Until (
-                        $iwrArgs.body.offset -ge $totalMatches
-                    )
-                }
+        $response = Invoke-WebRequest @iwrArgs
+
+        if($response.StatusCode -in 200..204){
+            if($ShowMetadata){
+                $response.Content | ConvertFrom-Json    
+            }
+            else{
+                ($response.Content | ConvertFrom-Json).Entities
             }
         }
-        catch {
-            Write-Error -Message "ERROR $($response.StatusCode)"
+        elseif($response.StatusCode -eq 401){
+            Write-Verbose -Message "Credential used not authorized, exiting..."
+            Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
+            exit
         }
-               
+        else{
+            Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
+        }    
+
     }
                 
 }
