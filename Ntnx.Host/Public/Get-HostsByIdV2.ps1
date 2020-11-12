@@ -1,4 +1,4 @@
-function Get-HostsV2 {   
+function Get-HostsByIdV2 {   
 <#
 .SYNOPSIS
 Dynamically Generated API Function
@@ -24,8 +24,12 @@ Please be aware that all code samples provided here are unofficial in nature, ar
         [PSCredential]
         $Credential,
 
+        [Parameter(Mandatory=$true)]
+        [string]
+        $Uuid,
+
         # Body Parameter1
-        [Parameter()]
+        [Parameter(Mandatory=$false)]
         [string]
         $Projection,
 
@@ -49,17 +53,18 @@ Please be aware that all code samples provided here are unofficial in nature, ar
 
     process {
         $body = [Hashtable]::new()
-        $body.add("count",1000)
-        
+
         if($null -ne $Projection){
             $body.add("projection",$Projection)
         }
 
         $iwrArgs = @{
-            Uri = "https://$($ComputerName):$($Port)/PrismGateway/services/rest/v2.0/hosts"
+            Uri = "https://$($ComputerName):$($Port)/PrismGateway/services/rest/v2.0/hosts/$Uuid"
             Method = "GET"
             ContentType = "application/json"
+            ErrorVariable = "iwrError"
         }
+
         if($body.count -ge 1){
             $iwrArgs.add("Body",($body | ConvertTo-Json))
         }
@@ -78,17 +83,17 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }
         }
         
-
         try{
-            $response = Invoke-WebRequest @iwrArgs -ErrorVariable iwrError
+            $response = Invoke-WebRequest @iwrArgs
 
             if($response.StatusCode -in 200..204){
                 $content = $response.Content | ConvertFrom-Json
                 if($null -ne $content.metadata){
                     Write-Verbose $content.metadata
-                }
-                if($ShowMetadata){
-                    $content
+
+                    if($ShowMetadata){
+                        $content.metadata    
+                    }
                 }
                 else{
                     $content.Entities
@@ -101,13 +106,12 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }
             else{
                 Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
-            }    
-        }
+            }   
+        } 
         catch{
             Write-Error -Message "API Call Failed"
             Write-Error -Message $iwrError.Message
         }
-
     }
                 
 }

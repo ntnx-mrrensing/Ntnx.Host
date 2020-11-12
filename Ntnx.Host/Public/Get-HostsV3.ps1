@@ -73,24 +73,34 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }
         }
         
-        $response = Invoke-WebRequest @iwrArgs
+        try{
+            $response = Invoke-WebRequest @iwrArgs -ErrorVariable iwrError
 
-        if($response.StatusCode -in 200..204){
-            if($ShowMetadata){
-                $response.Content | ConvertFrom-Json    
+            if($response.StatusCode -in 200..204){
+                $content = $response.Content | ConvertFrom-Json
+                if($null -ne $content.metadata){
+                    Write-Verbose $content.metadata
+                }
+                if($ShowMetadata){
+                    $content
+                }
+                else{
+                    $content.Entities
+                }
+            }
+            elseif($response.StatusCode -eq 401){
+                Write-Verbose -Message "Credential used not authorized, exiting..."
+                Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
+                exit
             }
             else{
-                ($response.Content | ConvertFrom-Json).Entities
-            }
+                Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
+            }    
         }
-        elseif($response.StatusCode -eq 401){
-            Write-Verbose -Message "Credential used not authorized, exiting..."
-            Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
-            exit
+        catch{
+            Write-Error -Message "API Call Failed"
+            Write-Error -Message $iwrError.Message
         }
-        else{
-            Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
-        }    
 
     }
                 
