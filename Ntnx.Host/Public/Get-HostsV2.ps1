@@ -50,7 +50,7 @@ Please be aware that all code samples provided here are unofficial in nature, ar
     process {
         $body = [Hashtable]::new()
         $body.add("count",1000)
-        
+
         if($null -ne $Projection){
             $body.add("projection",$Projection)
         }
@@ -104,8 +104,12 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }    
         }
         catch{
-            Write-Error -Message "API Call Failed"
-            Write-Error -Message $iwrError.Message
+            if($null -eq $iwrError){
+                Write-Error -Message "API Call Failed"
+            }
+            else{
+                Write-Error -Message $iwrError.Message
+            }
         }
 
     }
