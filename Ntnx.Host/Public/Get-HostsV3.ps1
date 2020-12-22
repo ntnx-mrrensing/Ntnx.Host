@@ -73,6 +73,7 @@ Please be aware that all code samples provided here are unofficial in nature, ar
             }
         }
         
+
         try{
             $response = Invoke-WebRequest @iwrArgs -ErrorVariable iwrError
 
@@ -88,11 +89,7 @@ Please be aware that all code samples provided here are unofficial in nature, ar
                     $content.Entities
                 }
             }
-            elseif($response.StatusCode -eq 401){
-                Write-Verbose -Message "Credential used not authorized, exiting..."
-                Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
-                exit
-            }
+
             else{
                 Write-Error -Message "$($response.StatusCode): $($response.StatusDescription)"
             }    
