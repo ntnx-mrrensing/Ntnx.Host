@@ -49,7 +49,7 @@ Please be aware that all code samples provided here are unofficial in nature, ar
 
     process {
         $body = [Hashtable]::new()
-        $body.add("count",1000)
+        #$body.add("count",1000)
 
         if($null -ne $Projection){
             $body.add("projection",$Projection)
